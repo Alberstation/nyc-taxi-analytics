@@ -27,7 +27,7 @@ export default function Upload() {
     setMessage(null)
     try {
       const res = await uploadFile(file, cabType, maxRows)
-      setMessage(`Successfully ingested ${res.created?.toLocaleString()} trips.`)
+      setMessage(`Successfully ingested ${(res.uploaded ?? 0).toLocaleString()} trips.`)
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (e) {
@@ -43,7 +43,7 @@ export default function Upload() {
     setMessage(null)
     try {
       const res = await loadSample()
-      setMessage(`Loaded ${res.created?.toLocaleString()} sample trips from ${res.files_loaded} file(s).`)
+      setMessage(`Loaded ${(res.loaded ?? 0).toLocaleString()} sample trips.`)
     } catch (e) {
       setError(e.message)
     } finally {
