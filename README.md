@@ -20,19 +20,19 @@ A full-stack analytics dashboard for **NYC TLC (Taxi & Limousine Commission)** t
 ### Visualizations
 | Chart | Description |
 |-------|-------------|
-| **Trips Over Time** | Line chart – daily trip counts |
-| **Trips by Hour** | Bar chart – hourly distribution (0–23) |
-| **Trips by Day of Week** | Bar chart – Mon–Sun distribution |
-| **Trips by Payment Type** | Bar chart – Credit card, Cash, etc. |
-| **Pickup Heatmap** | Map – raw pickup density by zone (top 80 per cab type) |
-| **Demand Clusters** | Map – geographic clusters of demand zones (DBSCAN) |
-| **Demand Prediction** | Line chart – forecast for next 7 days |
-| **Fare Prediction** | Bar/scatter – actual vs predicted fare by distance (ordered) |
+| **Trips Over Time (Aggregation)** | Line chart – daily trip counts |
+| **Trips by Hour of Day (Aggregation)** | Bar chart – 24h distribution (0–23) · SQL GROUP BY |
+| **Trips by Day of Week (Aggregation)** | Bar chart – Mon–Sun distribution · SQL GROUP BY |
+| **Trips by Payment Type (Aggregation)** | Bar chart – CC, Cash, etc. · SQL GROUP BY |
+| **Pickup Heatmap (Aggregation)** | Map – raw pickup density by zone · SQL GROUP BY |
+| **Demand Clusters (DBSCAN)** | Map – geographic clusters (eps=0.01, min_samples=4) |
+| **Demand Prediction** | Line chart – next 7 days forecast · Ridge + Polynomial (degree=2) |
+| **Fare Distribution** | Bar chart – top 20 trips by distance (mi) · actual fare ($) |
 
 ### ML Models
 - **Demand prediction**: Ridge regression + PolynomialFeatures (degree=2) + StandardScaler
-- **Fare prediction**: Ridge regression + PolynomialFeatures (degree=2) + StandardScaler
-- **Zone clustering**: **DBSCAN** (density-based, finds geographic demand clusters)
+- **Fare distribution**: Ridge regression + PolynomialFeatures (degree=2) + StandardScaler → top 20 trips by distance
+- **Zone clustering**: **DBSCAN** (eps=0.01, min_samples=4, geographic demand clusters)
 
 ---
 
@@ -60,7 +60,7 @@ A full-stack analytics dashboard for **NYC TLC (Taxi & Limousine Commission)** t
 
 ---
 
-### 2. Fare Prediction (Actual vs Predicted)
+### 2. Fare Distribution
 
 | Parameter | Value |
 |-----------|-------|
@@ -79,7 +79,7 @@ A full-stack analytics dashboard for **NYC TLC (Taxi & Limousine Commission)** t
 | `Ridge.alpha` | 0.5 |
 | `random_state` | 42 |
 
-**Output:** First 50 trips **ordered by trip_distance** with actual vs predicted fare.
+**Output:** Top **20** trips ordered by trip_distance with actual fare (bar chart).
 
 ---
 
@@ -109,7 +109,7 @@ A full-stack analytics dashboard for **NYC TLC (Taxi & Limousine Commission)** t
 **DBSCAN hyperparameters:**
 | Hyperparameter | Value |
 |----------------|-------|
-| `eps` | 0.025 (degrees ~2.8 km in NYC) |
+| `eps` | 0.01 |
 | `min_samples` | 4 |
 | `metric` | `euclidean` |
 
@@ -272,7 +272,7 @@ All analytics endpoints accept `?cab_type=all|yellow|green`.
 | `/api/demand-predictions/` | GET | Demand forecast |
 | `/api/cluster-zones/` | GET | DBSCAN cluster zones |
 | `/api/dashboard/` | GET | All dashboard data (single request) |
-| `/api/duration-predictions/` | GET | Fare prediction sample |
+| `/api/duration-predictions/` | GET | Fare distribution data (top 20 by distance) |
 | `/api/upload/` | POST | Upload CSV/Parquet |
 | `/api/load-sample/` | POST | Load from `data/` |
 
@@ -300,21 +300,6 @@ All analytics endpoints accept `?cab_type=all|yellow|green`.
 ├── docker-compose.yml
 └── requirements.txt
 ```
-
----
-
-## Suggested Additional Charts (Future Work)
-
-Based on the available data:
-
-| Chart | Value |
-|-------|-------|
-| **Tip vs Fare scatter** | Shows tipping behavior by cab type |
-| **Distance distribution** | Histogram of trip distances |
-| **Ratecode breakdown** | Bar chart by rate code |
-| **Congestion surcharge over time** | Impact of congestion pricing |
-| **Peak hour classifier** | Logistic Regression – is this hour high-demand? |
-| **Top pickup/dropoff zone pairs** | Sankey or table of popular routes |
 
 ---
 
