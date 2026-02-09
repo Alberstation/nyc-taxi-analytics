@@ -50,14 +50,14 @@ def get_metrics(cab_type):
         return {'total_trips': 0, 'avg_fare': 0, 'avg_distance': 0, 'busiest_hour': 'N/A'}
     avg_fare = round(qs.aggregate(Avg('fare_amount'))['fare_amount__avg'] or 0, 2)
     avg_dist = round(qs.aggregate(Avg('trip_distance'))['trip_distance__avg'] or 0, 2)
-    by_hour = qs.annotate(h=ExtractHour('pickup_datetime')).values('h').annotate(c=Count('id')).order_by('-c')
+    by_hour = qs.annotate(h=ExtractHour('pickup_datetime', tzinfo=TZ)).values('h').annotate(c=Count('id')).order_by('-c')
     busiest = by_hour.first()
     busiest_hour = f"{busiest['h']:02d}:00" if busiest else 'N/A'
     return {'total_trips': total, 'avg_fare': avg_fare, 'avg_distance': avg_dist, 'busiest_hour': busiest_hour}
 
 
 def get_trips_over_time(cab_type):
-    qs = _base_qs(cab_type).annotate(d=TruncDate('pickup_datetime')).values('d').annotate(c=Count('id')).order_by('d')
+    qs = _base_qs(cab_type).annotate(d=TruncDate('pickup_datetime', tzinfo=TZ)).values('d').annotate(c=Count('id')).order_by('d')
     labels = []
     data = []
     for r in qs:
@@ -71,7 +71,7 @@ def get_trips_over_time(cab_type):
 
 
 def get_trips_by_hour(cab_type):
-    qs = _base_qs(cab_type).annotate(h=ExtractHour('pickup_datetime')).values('h').annotate(c=Count('id')).order_by('h')
+    qs = _base_qs(cab_type).annotate(h=ExtractHour('pickup_datetime', tzinfo=TZ)).values('h').annotate(c=Count('id')).order_by('h')
     by_h = {r['h']: r['c'] for r in qs}
     labels = [f"{i:02d}:00" for i in range(24)]
     data = [by_h.get(i, 0) for i in range(24)]
@@ -79,7 +79,7 @@ def get_trips_by_hour(cab_type):
 
 
 def get_trips_by_weekday(cab_type):
-    qs = _base_qs(cab_type).annotate(wd=ExtractWeekDay('pickup_datetime')).values('wd').annotate(c=Count('id')).order_by('wd')
+    qs = _base_qs(cab_type).annotate(wd=ExtractWeekDay('pickup_datetime', tzinfo=TZ)).values('wd').annotate(c=Count('id')).order_by('wd')
     by_wd = {r['wd']: r['c'] for r in qs}  # 1=Sun, 2=Mon, ..., 7=Sat in Django
     labels = WEEKDAY_LABELS  # Mon..Sun
     wd_order = [2, 3, 4, 5, 6, 7, 1]  # Mon=2, Tue=3, ..., Sun=1
@@ -94,7 +94,7 @@ def get_payment_type(cab_type):
     return {'labels': labels, 'data': data}
 
 
-def get_heatmap(cab_type, top_n=80):
+def get_heatmap(cab_type, top_n=150):
     qs = _base_qs(cab_type).values('pulocation_id').annotate(c=Count('id')).order_by('-c')[:top_n]
     zone_ids = [r['pulocation_id'] for r in qs]
     zone_map = {z.location_id: z for z in TaxiZone.objects.filter(location_id__in=zone_ids)}
@@ -108,7 +108,7 @@ def get_heatmap(cab_type, top_n=80):
 
 def get_demand_predictions(cab_type):
     """Ridge + Polynomial (degree=2), forecast next 7 days."""
-    qs = _base_qs(cab_type).annotate(d=TruncDate('pickup_datetime')).values('d').annotate(c=Count('id')).order_by('d')
+    qs = _base_qs(cab_type).annotate(d=TruncDate('pickup_datetime', tzinfo=TZ)).values('d').annotate(c=Count('id')).order_by('d')
     daily = list(qs)
     if len(daily) < 7:
         return {'labels': [], 'actual': [], 'predicted': []}
@@ -150,14 +150,14 @@ def get_duration_predictions(cab_type, top_n=20):
     trips = list(qs)
     if len(trips) < 50:
         return {'labels': [], 'actual': []}
-    # Sort by distance and take top N
-    sorted_trips = sorted(trips, key=lambda t: t['trip_distance'], reverse=True)[:top_n]
+    # Sort by distance ascending (less miles -> more miles) and take top N longest trips
+    sorted_trips = sorted(trips, key=lambda t: t['trip_distance'])[-top_n:]
     labels = [f"{t['trip_distance']:.1f}" for t in sorted_trips]
     actual = [round(t['fare_amount'], 2) for t in sorted_trips]
     return {'labels': labels, 'actual': actual}
 
 
-def get_cluster_zones(cab_type, eps=0.01, min_samples=4, top_zones=150):
+def get_cluster_zones(cab_type, eps=0.015, min_samples=3, top_zones=200):
     """DBSCAN clustering of top zones by pickup count."""
     qs = _base_qs(cab_type).values('pulocation_id').annotate(c=Count('id')).order_by('-c')[:top_zones]
     zone_ids = [r['pulocation_id'] for r in qs]

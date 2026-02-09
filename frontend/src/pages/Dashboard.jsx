@@ -280,7 +280,7 @@ export default function Dashboard() {
                   type: 'scattermap',
                   mode: 'markers',
                   marker: {
-                    size: heatmap.points.map((p) => Math.min(22, 5 + p.count / 200)),
+                    size: heatmap.points.map((p) => Math.min(12, 4 + p.count / 500)),
                     color: heatmap.points.map((p) => p.count),
                     colorscale: [[0, '#0a0a0a'], [0.5, '#005AFF'], [1, '#3d7fff']],
                     showscale: true,
@@ -305,7 +305,7 @@ export default function Dashboard() {
                   type: 'scattermap',
                   mode: 'markers',
                   marker: {
-                    size: clusters.zones.map((z) => Math.min(18, 5 + z.count / 500)),
+                    size: clusters.zones.map((z) => Math.min(12, 4 + z.count / 800)),
                     color: clusters.zones.map((z) => (z.cluster >= 0 ? z.cluster : -1)),
                     colorscale: [[0, '#0a0a0a'], [0.2, '#0047cc'], [0.5, '#005AFF'], [0.8, '#3d7fff'], [1, '#7aa8ff']],
                     showscale: true,

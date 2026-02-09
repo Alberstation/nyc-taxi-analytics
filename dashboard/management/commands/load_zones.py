@@ -2,8 +2,10 @@
 Load NYC taxi zones from TLC lookup table.
 Fetches from https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
 or uses borough centroids as fallback.
+Each zone gets a unique (lat, lon) spread within its borough for proper map display.
 """
 import csv
+import math
 import urllib.request
 from pathlib import Path
 
@@ -12,7 +14,7 @@ from django.db import transaction
 
 from dashboard.models import TaxiZone
 
-# Borough approximate centroids (lat, lon) when zone lookup has no coords
+# Borough approximate centroids (lat, lon) and spread radius for zone distribution
 BOROUGH_CENTROIDS = {
     'Manhattan': (40.7589, -73.9851),
     'Brooklyn': (40.6501, -73.9495),
@@ -22,6 +24,18 @@ BOROUGH_CENTROIDS = {
     'EWR': (40.6895, -74.1745),
     'Unknown': (40.73, -73.99),
 }
+
+# Spread (~0.03 deg ≈ 3 km) so each zone has distinct coordinates within borough
+SPREAD = 0.03
+
+
+def _zone_coords(location_id, borough):
+    """Return unique (lat, lon) per zone, spread within borough area."""
+    base_lat, base_lon = BOROUGH_CENTROIDS.get(borough, BOROUGH_CENTROIDS['Unknown'])
+    # Deterministic offset from location_id so each zone is distinct
+    lat_off = SPREAD * (math.sin(location_id * 0.7) + 0.5 * math.cos(location_id * 0.3))
+    lon_off = SPREAD * (math.cos(location_id * 0.5) + 0.5 * math.sin(location_id * 0.4))
+    return (round(base_lat + lat_off, 6), round(base_lon + lon_off, 6))
 
 ZONE_LOOKUP_URL = 'https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv'
 
@@ -73,7 +87,7 @@ class Command(BaseCommand):
                     continue
                 zone = row.get('Zone') or row.get('zone') or ''
                 borough = row.get('Borough') or row.get('borough') or 'Unknown'
-                lat, lon = BOROUGH_CENTROIDS.get(borough, BOROUGH_CENTROIDS['Unknown'])
+                lat, lon = _zone_coords(lid, borough)
                 TaxiZone.objects.create(
                     location_id=lid,
                     zone=zone[:100] if zone else '',
@@ -85,15 +99,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Created {created} taxi zones'))
 
     def _create_placeholder_zones(self):
-        """Create minimal zones 1-263 with NYC center when no lookup available."""
+        """Create minimal zones 1-263 with spread coordinates when no lookup available."""
         with transaction.atomic():
             TaxiZone.objects.all().delete()
             for i in range(1, 264):
+                lat, lon = _zone_coords(i, 'Unknown')
                 TaxiZone.objects.create(
                     location_id=i,
                     zone=f'Zone {i}',
                     borough='',
-                    lat=40.73,
-                    lon=-73.99,
+                    lat=lat,
+                    lon=lon,
                 )
         self.stdout.write(self.style.WARNING('Created 263 placeholder zones (no lookup available)'))

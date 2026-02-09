@@ -7,6 +7,7 @@ import io
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
 
 TZ = ZoneInfo('America/New_York')
@@ -90,10 +91,11 @@ def _coerce_int(val, default=None):
         return default
 
 
-def parse_parquet(path_or_file, cab_type, max_rows=100000):
+def parse_parquet(path_or_file, cab_type, max_rows=100000, sample_across=True):
     """
     Parse parquet file and yield dicts for TaxiTrip bulk_create.
     cab_type: 'yellow' or 'green'
+    sample_across: if True and file > max_rows, sample evenly across the file for better date distribution.
     """
     df = pd.read_parquet(path_or_file)
     pickup_col = 'tpep_pickup_datetime' if cab_type == 'yellow' else 'lpep_pickup_datetime'
@@ -102,8 +104,14 @@ def parse_parquet(path_or_file, cab_type, max_rows=100000):
     if pickup_col not in df.columns:
         raise ValueError(f"Missing {pickup_col} - is this {cab_type} taxi data?")
 
-    n = min(len(df), max_rows)
-    for i in range(n):
+    if sample_across and len(df) > max_rows:
+        # Sample evenly across file for better date distribution (avoids only first few days)
+        indices = np.linspace(0, len(df) - 1, max_rows, dtype=int)
+        df = df.iloc[indices]
+    else:
+        df = df.head(max_rows)
+
+    for i in range(len(df)):
         row = df.iloc[i]
         dt = _parse_datetime(row.get(pickup_col))
         if dt is None or dt.year != 2025:
