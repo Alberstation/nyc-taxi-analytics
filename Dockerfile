@@ -25,11 +25,13 @@ COPY manage.py .
 COPY nyc_taxi_dashboard/ nyc_taxi_dashboard/
 COPY dashboard/ dashboard/
 
+# data/ is mounted at runtime via docker-compose volume (./data:/app/data)
+
 # Copy built React frontend
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 # Expose port
 EXPOSE 8000
 
-# Run migrations, load zones, and start server
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py load_zones && gunicorn --bind 0.0.0.0:8000 --workers 2 nyc_taxi_dashboard.wsgi:application"]
+# Run migrations, load zones, pre-load sample data, and start server
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py load_zones && python manage.py load_sample && gunicorn --bind 0.0.0.0:8000 --workers 2 nyc_taxi_dashboard.wsgi:application"]

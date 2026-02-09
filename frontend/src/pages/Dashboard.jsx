@@ -165,7 +165,10 @@ export default function Dashboard() {
               margin: { ...layout.margin, b: 50 },
               xaxis: {
                 ...layout.xaxis,
-                range: ['2025-01-01', '2025-12-31'],
+                type: 'date',
+                range: (tripsOverTime?.labels?.length > 0)
+                  ? [tripsOverTime.labels[0], tripsOverTime.labels[tripsOverTime.labels.length - 1]]
+                  : ['2025-01-01', '2025-12-31'],
                 tickfont: { size: 12, color: '#f5f5f5' },
                 tickangle: -20,
                 showgrid: true,
