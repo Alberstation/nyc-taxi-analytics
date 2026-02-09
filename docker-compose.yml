@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    container_name: nyc_taxi_dashboard
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount data folder for load-sample (read parquet files)
+      - ./data:/app/data:ro
+      # Persist SQLite database
+      - db_data:/app/db
+    environment:
+      - DJANGO_SETTINGS_MODULE=nyc_taxi_dashboard.settings
+      - PYTHONUNBUFFERED=1
+      - DB_PATH=/app/db/db.sqlite3
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py load_zones &&
+             python manage.py load_sample --skip-existing &&
+             gunicorn --bind 0.0.0.0:8000 --workers 2 nyc_taxi_dashboard.wsgi:application"
+
+volumes:
+  db_data:
