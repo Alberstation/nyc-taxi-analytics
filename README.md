@@ -281,41 +281,41 @@ All analytics endpoints accept `?cab_type=all|yellow|green`.
 ## Project Structure
 
 ```
-├── manage.py
-├── requirements.txt
-├── Dockerfile
-├── Dockerfile.dev
-├── docker-compose.yml
-├── docker-compose.dev.yml
-├── nyc_taxi_dashboard/    # Django project
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
+├── manage.py               # Django CLI (runserver, migrate, load_zones, etc.)
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Full-stack image (backend + frontend build)
+├── Dockerfile.dev          # Backend-only image for local frontend dev
+├── docker-compose.yml      # Run backend + frontend in containers
+├── docker-compose.dev.yml  # Backend in container, frontend runs locally
+├── nyc_taxi_dashboard/     # Django project
+│   ├── settings.py         # Django settings (DB, INSTALLED_APPS, static, CORS)
+│   ├── urls.py             # Root URL config (api/, admin/, SPA catch-all)
+│   └── wsgi.py             # WSGI entry for Gunicorn
 ├── dashboard/              # Django app
-│   ├── models.py          # TaxiTrip, TaxiZone
-│   ├── parsers.py         # CSV/Parquet parsing (epoch ms support)
-│   ├── analytics.py       # Queries + ML (Ridge, PolynomialFeatures, DBSCAN)
-│   ├── views.py
-│   ├── urls.py
-│   ├── apps.py
-│   ├── migrations/
+│   ├── models.py           # TaxiTrip, TaxiZone
+│   ├── parsers.py          # CSV/Parquet parsing (epoch ms, Yellow/Green schema)
+│   ├── analytics.py        # Queries + ML (Ridge, PolynomialFeatures, DBSCAN)
+│   ├── views.py            # API view handlers (metrics, upload, dashboard, etc.)
+│   ├── urls.py             # API route definitions (/api/metrics/, /api/upload/, …)
+│   ├── apps.py             # AppConfig (DashboardConfig)
+│   ├── migrations/         # DB migrations
 │   └── management/commands/
-│       ├── load_zones.py
-│       └── load_sample.py
+│       ├── load_zones.py   # Load TaxiZone from zone lookup CSV
+│       └── load_sample.py  # Ingest sample parquet from data/
 ├── frontend/               # React app (Vite)
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── .nvmrc
+│   ├── index.html          # SPA entry HTML
+│   ├── package.json        # npm dependencies and scripts
+│   ├── vite.config.js      # Vite config (proxy /api to backend, port 5173)
+│   ├── .nvmrc              # Node version (20)
 │   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── index.css
-│       ├── api.js         # API client (cab_type filter)
+│       ├── main.jsx        # React root (BrowserRouter, App)
+│       ├── App.jsx         # Routes (Dashboard, Upload)
+│       ├── index.css       # Global styles
+│       ├── api.js          # API client (cab_type filter, fetch helpers)
 │       └── pages/
-│           ├── Dashboard.jsx
-│           └── Upload.jsx
-└── data/                   # Parquet files (yellow_*, green_*)
+│           ├── Dashboard.jsx  # Dashboard page (charts, metrics, maps)
+│           └── Upload.jsx    # Upload CSV/Parquet and Load Sample
+└── data/                   # Parquet files (yellow_*, green_* tripdata)
 ```
 
 ---
