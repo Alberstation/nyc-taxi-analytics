@@ -281,24 +281,41 @@ All analytics endpoints accept `?cab_type=all|yellow|green`.
 ## Project Structure
 
 ```
+├── manage.py
+├── requirements.txt
+├── Dockerfile
+├── Dockerfile.dev
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── nyc_taxi_dashboard/    # Django project
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
 ├── dashboard/              # Django app
 │   ├── models.py          # TaxiTrip, TaxiZone
 │   ├── parsers.py         # CSV/Parquet parsing (epoch ms support)
 │   ├── analytics.py       # Queries + ML (Ridge, PolynomialFeatures, DBSCAN)
-│   ├── views.py           # API views
+│   ├── views.py
+│   ├── urls.py
+│   ├── apps.py
+│   ├── migrations/
 │   └── management/commands/
-│       └── load_zones.py
-├── frontend/               # React app
-│   ├── src/
-│   │   ├── pages/         # Dashboard, Upload
-│   │   ├── api.js         # API client (cab_type filter)
-│   │   └── App.jsx
-│   └── index.html
-├── data/                   # Parquet files
-├── Dockerfile
-├── Dockerfile.dev          # Backend-only for dev
-├── docker-compose.yml
-└── requirements.txt
+│       ├── load_zones.py
+│       └── load_sample.py
+├── frontend/               # React app (Vite)
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── .nvmrc
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── index.css
+│       ├── api.js         # API client (cab_type filter)
+│       └── pages/
+│           ├── Dashboard.jsx
+│           └── Upload.jsx
+└── data/                   # Parquet files (yellow_*, green_*)
 ```
 
 ---
